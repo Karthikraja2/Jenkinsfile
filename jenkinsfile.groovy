@@ -9,7 +9,6 @@ pipeline {
         stage('Build') {
             steps {
                 // your build steps here
-                echo "test the app"
             }
         }
         stage('Test') {
