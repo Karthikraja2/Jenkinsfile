@@ -1,0 +1,167 @@
+pipeline {
+    agent any
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/user/repo.git'
+            }
+        }
+	stage('Setup') {
+            steps {
+                sh 'npm install'
+            }
+        }
+        stage('Build and Test') {
+            steps {
+                sh 'npm run build'
+                sh 'npm test'
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh 'npm run package'
+            }
+        }
+	stage('Vulnerability Analysis') {
+            steps {
+                sh 'npm install -g npm-audit-ci'
+                sh 'npm-audit-ci'
+            }
+            post {
+                failure {
+                    mail to: 'dev-team@example.com',
+                    subject: 'Vulnerabilities found in npm packages',
+                    body: 'Vulnerabilities were found in the npm packages. Please see the Jenkins pipeline for more details.'
+                }
+            }
+        }
+	stage('Linting') {
+            steps {
+                sh 'npm install -g eslint'
+                sh 'eslint .'
+            }
+            post {
+                failure {
+                    mail to: 'dev-team@example.com',
+                    subject: 'Linting Errors found',
+                    body: 'Linting errors were found. Please see the Jenkins pipeline for more details.'
+                }
+            }
+        }
+	stage('Build and Test') {
+            steps {
+                sh 'mvn clean install'
+            }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh 'mvn sonar:sonar'
+                }
+            }
+            post {
+                failure {
+                    mail to: 'dev-team@example.com',
+                    subject: 'SonarQube Quality Gate Failed',
+                    body: 'Quality gate failed. Please see the SonarQube dashboard for more details.'
+                }
+            }
+        }
+	stage('Test and Quality Check') {
+            steps {
+                sh 'npm test'
+                sh 'npm run lint'
+            }
+            post {
+                failure {
+                    mail to: 'dev-team@example.com',
+                    subject: 'Build failed',
+                    body: 'The build failed. Please see the Jenkins pipeline for more details.'
+                }
+            }
+        }
+	stage('Test') {
+            steps {
+                sh 'npm run test:unit'
+            }
+            post {
+                failure {
+                    mail to: 'dev-team@example.com',
+                    subject: 'Unit test failed',
+                    body: 'Unit test failed. Please see the Jenkins pipeline for more details.'
+                }
+            }
+        }
+	stage('Security Check') {
+            steps {
+                sh 'npm install -g retire'
+                sh 'retire --outputformat json --outputpath ./security-report.json'
+                sh 'npm install -g snyk'
+                sh 'snyk test'
+            }
+            post {
+                failure {
+                    mail to: 'dev-team@example.com',
+                    subject: 'Security issue found',
+                    body: 'Security issue found. Please see the Jenkins pipeline for more details.'
+                }
+            }
+        }
+	stage('Archive') {
+            steps {
+                archiveArtifacts artifacts: 'target/*.jar'
+            }
+        }
+        stage('Store') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'my-repo', passwordVariable: 'REPO_PASSWORD', usernameVariable: 'REPO_USERNAME')]) {
+                    sh "mvn deploy:deploy-file -Durl=https://my-repo.com/repo/ -DrepositoryId=my-repo -Dfile=target/*.jar -DgroupId=com.mygroup -DartifactId=myartifact -Dversion=1.0 -Dpackaging=jar -DgeneratePom=true -Dusername=$REPO_USERNAME -Dpassword=$REPO_PASSWORD"
+                }
+            }
+        }
+	stage('Deploy') {
+            steps {
+                sh './deploy.sh'
+            }
+            post {
+                failure {
+                    mail to: 'dev-team@example.com',
+                    subject: 'Deployment failed',
+                    body: 'Deployment failed. Please see the Jenkins pipeline for more details.'
+                }
+            }
+        }
+	stage('Automated Test') {
+            steps {
+                sh 'npm install -g protractor'
+                sh 'webdriver-manager update'
+                sh 'protractor conf.js'
+            }
+            post {
+                failure {
+                    mail to: 'dev-team@example.com',
+                    subject: 'Automated test failed',
+                    body: 'Automated test failed. Please see the Jenkins pipeline for more details.'
+                }
+            }
+        }
+	stage('ZAP Scan') {
+            steps {
+                sh 'docker run -d -p 8090:8090 owasp/zap2docker-stable zap.sh -daemon -host 0.0.0.0 -port 8090 -config api.disablekey=true'
+                sh 'sleep 10s'
+                sh "zap-cli --zap-url http://localhost:8090/ --api-key '' active-scan --recursive --scanners all --alert-threshold High -u http://your-app-url"
+                sh 'docker stop $(docker ps -q)'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'zap-report.html'
+                }
+                failure {
+                    mail to: 'dev-team@example.com',
+                    subject: 'ZAP scan failed',
+                    body: 'ZAP scan failed. Please see the Jenkins pipeline for more details.'
+                }
+            }
+        }
+    }
+}
