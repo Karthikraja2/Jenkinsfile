@@ -1,0 +1,410 @@
++ cat /var/jenkins_home/script/liberty-dev4-a13.sh
+#!/bin/bash
+
+######################################################################
+suser=e134483
+######################################################################
+
+
+mpaenv=$1
+currdate=`date '+%Y%m%d'`
+rproploc=/app/resources/memberportal/properties
+rdeplloc=/app/deployment
+
+case $mpaenv in
+	DEV5)
+                uhost=nrxav0640.bcbsm.com
+                droot=DEV5
+                proot=bcbsm_dev5
+                broot=mpa-tech-upgrade-dep
+                ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}|sed 's/.*/\L&/; s/[a-z]*/\u&/g'`
+                ;;
+        DEV1)
+                uhost=nrxav0640
+                droot=Dev1
+                proot=bcbsm_dev
+                broot=DEV1Builder
+                ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}|sed 's/.*/\L&/; s/[a-z]*/\u&/g'`
+                ;;
+        DEV2)
+                uhost=nrxav0640
+                droot=Dev2
+                proot=bcbsm_dev2
+                broot=DEV2Builder
+                ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}|sed 's/.*/\L&/; s/[a-z]*/\u&/g'`
+                ;;
+        DEV3)
+                uhost=nrxav0640
+                droot=Dev3
+                proot=bcbsm_dev3
+                broot=DEV3Builder
+                ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}|sed 's/.*/\L&/; s/[a-z]*/\u&/g'`
+                ;;
+	DEV4)
+                uhost=nrxav0640
+                droot=DEV4
+                proot=bcbsm_dev4
+                broot=DEV4Builder
+                ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}|sed 's/.*/\L&/; s/[a-z]*/\u&/g'`
+                ;;
+        SIT2)
+                uhost=nrxav0642
+                droot=SIT2
+                proot=bcbsm_sit2
+                broot=SIT2Builder
+                ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}`
+                ;;
+        SIT3)
+                uhost=nrxav0642
+                droot=SIT3
+                proot=bcbsm_sit3
+                broot=SIT3Builder
+                ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}`
+                ;;
+        SIT4)
+                uhost=nrxav0641
+                droot=SIT4
+                proot=bcbsm_sit4
+                broot=SIT4Builder
+                ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}`
+                ;;
+        SIT5)
+                uhost=nrxav0642
+                droot=SIT5
+                proot=bcbsm_sit5
+                broot=SIT5Builder
+                ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}`
+                ;;
+        SIT6)
+                uhost=nrxav0642
+                droot=SIT6
+                proot=bcbsm_sit6
+                broot=SIT6Builder
+                ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}`
+                ;;
+        SIT7)
+                uhost=nrxav0641
+                droot=SIT7
+                proot=bcbsm_sit7
+                broot=SIT7Builder
+                ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}`
+                ;;
+       SIT8)
+                uhost=nrxav0641
+                droot=SIT8
+                proot=bcbsm_sit8
+                broot=SIT8Builder
+                ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}`
+                ;;
+        SIT)
+                uhost=nrxav0641
+                droot=SIT1
+                proot=bcbsm_sit
+                broot=SIT1Builder
+                ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}`
+                ;;
+        SIT1)
+                uhost=nrxav0642
+                droot=SIT1
+                proot=bcbsm_sit
+                broot=SIT1Builder
+                ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}`
+                ;;
+        *)
+                echo "ERROR: Wrong Environment"
+                exit -1
+                ;;
+esac
+
+jpath=$(pwd)
+
+setSITEnv() {
+        uhost=nrxav0641
+        droot=SIT1
+        proot=bcbsm_sit
+        broot=SIT1Builder
+        ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}`
+}
+
+deployProperties() {
+        echo
+        echo "Deploying new properties files mpa-app/mpa-config/src/main/resources/properties/$proot.."
+        ssh -o StrictHostKeyChecking=no $suser@$uhost mv -f $rproploc/$proot $rproploc/$proot.$currdate
+        scp -pr $jpath/mpa-app/mpa-config/src/main/resources/properties/$proot $suser@$uhost:$rproploc
+        echo "Deploying new properties files mpa-app/mpa-config/src/main/resources/properties/$proot... Complete"
+        echo
+}
+
+deployResponsiveDist() {
+        echo
+        echo "Deploying responsive compiled code"
+        ssh -o StrictHostKeyChecking=no $suser@nrxwv0638 rm -rf /app/docs/wsIHSmpaDEV4srv1/static/mpa/responsive/app
+        scp -pr /var/lib/jenkins/mpar/DEV4/mpa_responsive/mpa-web/dist/app $suser@nrxwv0638:/app/docs/wsIHSmpaDEV4srv1/static/mpa/responsive/app
+	ssh $suser@nrxwv0638 chmod -R 777 /app/docs/wsIHSmpaDEV4srv1/static
+        echo "Deploying responsive compiled code... Complete"
+        echo
+}
+
+deployResponsiveOBSDist() {
+        echo
+        echo "Deploying responsive OBS compiled code"
+        ssh -o StrictHostKeyChecking=no $suser@nrxwv0638 rm -rf /app/docs/wsIHSmpaDEV4srv1/static/obs/responsive/obs-responsive
+        scp -pr /var/lib/jenkins/mpar/DEVOBS/obs-responsive/dist/obs-responsive $suser@nrxwv0638:/app/docs/wsIHSmpaDEV4srv1/static/obs/responsive/
+	ssh $suser@nrxwv0638 chmod -R 777 /app/docs/wsIHSmpaDEV4srv1/static
+        echo "Deploying responsive compiled code... Complete"
+        echo
+}
+
+deployExtApplication() {
+        echo
+        echo "Deploying external application mpa-app/mpa-web/build/libs/mpa-web-WAS-internet.war.."
+        scp $jpath/mpa-app/mpa-web/build/libs/mpa-web-WAS-internet.war $suser@$uhost:$rdeplloc/$droot/MpoTechApp/
+        echo "Deploying external application $rdeplloc/$droot/MpoTechApp/mpa-web-WAS-internet.war... Complete"
+        echo
+}
+deployIntApplication() {
+        echo
+        echo "Deploying internal application  mpa-app/mpa-web/build/libs/mpa-web-WAS-mpinternal.war.."
+        scp $jpath/mpa-app/mpa-web/build/libs/mpa-web-WAS-mpinternal.war $suser@$uhost:$rdeplloc/$droot/MpaIntCsr/
+        echo "Deploying internal application  $rdeplloc/$droot/MpaIntCsr/mpa-web-WAS-mpinternal.war... Complete"
+        echo
+}
+
+restartExtServers() {
+        echo
+        echo "Sending request to restart external servers.."
+        rresponse=`curl -sk -u websupport2:"password1" https://urbancode-dev.bcbsm.com/cli/applicationProcessRequest/request  -X PUT --data '{"application": "MP-Operation", "description": "Restart Servers", "applicationProcess": "restartServers", "environment": "'"$ucdenv"'", "properties":{"restartServers/mww.liberty.serverNamePattern":"'"MpaExtMem$srvenv"'"} }'`
+        requestid=`echo $rresponse|cut -d':' -f2|sed 's/\}//g;s/"//g'`
+        echo "$requestid"
+        echo "Sending request to restart external servers... Complete"
+}
+restartIntServers() {
+        echo
+        echo "Sending request to restart internal servers.."
+        rresponse=`curl -sk -u websupport2:"password1" https://urbancode-dev.bcbsm.com/cli/applicationProcessRequest/request  -X PUT --data '{"application": "MP-Operation", "description": "Restart Servers", "applicationProcess": "restartServers", "environment": "'"$ucdenv"'", "properties":{"restartServers/mww.liberty.serverNamePattern":"'"MpaIntCsr$srvenv"'"} }'`
+        requestid=`echo $rresponse|cut -d':' -f2|sed 's/\}//g;s/"//g'`
+        echo "$requestid"
+        echo "Sending request to restart internal servers... Complete"
+}
+
+getSecurityJar() {
+        echo
+        echo "Getting the security jar from $SECURITY_JAR_BRANCH branch.."
+        cd /var/lib/jenkins/build_setup/aaa
+        git checkout $SECURITY_JAR_BRANCH
+        git pull
+        cd -
+        cp /var/lib/jenkins/build_setup/aaa/Deployable/mpa-security-0.0.1.jar mpa-app/mpa-web/lib/
+        echo "Getting the security jar from $SECURITY_JAR_BRANCH branch... Complete"
+        echo
+}
+
+buildResponsive() {
+        echo
+        AOT=/var/lib/jenkins/mpar/AOT
+        mpar=/var/lib/jenkins/mpar/DEV4/mpa_responsive/
+        export PATH=/opt/nodejs/node-v16.10.0-linux-x64/bin:$mpar/mpa-web/node_modules/.bin:$PATH
+        BHOME=`pwd|sed 's/ /\\ /g'`
+
+        if [ -z "$MPAR_BRANCH_NAME" ]
+        then
+                echo "Skiping MPR, doing traditional build only.."
+        else
+                echo "Starting Production Build for MPR App.."
+		echo $mpar
+                cd $mpar
+		git fetch
+		git pull
+                git checkout $MPAR_BRANCH_NAME
+                git pull
+                rm -rf "$BHOME/mpa-app/mpa-web/src/main/webapp/responsive/app"
+                cd mpa-web
+ 
+				#angular 13
+                node --max_old_space_size=4096 $mpar/mpa-web/node_modules/.bin/ng build --configuration=production mpa
+
+                if [ $? -ne 0 ]; then
+                        echo "ERROR: MP Responsive Build For Failed - MPA"
+                        exit -1
+                fi
+
+				cd $mpar/mpa-web/dist/app/mpa
+				for f in `find . -name "styles.*.css" -print`; do
+					sed -i.bak 's|/content/|../../../content/|g' $f
+				done
+
+				for f in `find . -name "styles.*.css" -print`; do
+					sed -i.bak 's|/assets/lib/bootstrap/fonts/|assets/lib/bootstrap/fonts/|g' $f
+				done
+
+				for f in `find . -name "styles.*.css" -print`; do
+					sed -i.bak 's|/assets/images/|assets/images/|g' $f
+				done
+
+				for f in `find . -name "main.*.js" -print`; do
+					sed -i.bak 's|/assets/images/|app/mpa/assets/images/|g' $f
+				done
+
+
+				sed -i.bak 's|assets/lib/|app/mpa/assets/lib/|g' mpa.html
+				sed -i.bak 's|\.\./fonts|app/mpa/assets/lib/fontawesome/fonts|g' mpa.html
+				sed -i.bak 's|href="styles.|href="app/mpa/styles.|g' mpa.html
+				sed -i.bak -r 's/(runtime|polyfills|scripts|main\..*?js)/app\/mpa\/\1/g' mpa.html
+				
+				rm -f *.bak
+
+                #mkdir -p "$BHOME/mpa-app/mpa-web/src/main/webapp/responsive/app"
+
+		#cd $mpar/mpa-web/dist
+                #find app/ -name "*.*" -exec cp --parents {} "$BHOME/mpa-app/mpa-web/src/main/webapp/responsive/" \;
+
+                #ls -ltraFh "$BHOME/mpa-app/mpa-web/src/main/webapp/responsive/"
+        fi
+        cd $jpath
+        echo " Production Build for MPR App... Complete"
+        echo
+}
+
+buildOBSResponsive() {
+        echo 'OBS build method'
+        mpobs=/var/lib/jenkins/mpar/DEVOBS/obs-responsive
+        export PATH=/opt/nodejs/node-v16.13.0-linux-x64/bin:$mpobs/node_modules/.bin:$PATH
+        WHOME=`pwd|sed 's/ /\\ /g'`
+
+        if [ -z "$MPOBS_BRANCH_NAME" ]
+        then
+                echo "Skiping MPOBS, doing traditional build only.."
+        else
+                echo "Starting Production Build for MPOBS App.."
+                cd $mpobs
+		git fetch
+		git pull
+                git checkout $MPOBS_BRANCH_NAME
+                git pull
+                #rm -rf "$mpobs/dist/"
+ 
+		#angular 15
+                node --max_old_space_size=4096 $mpobs/node_modules/.bin/ng build --configuration=production
+
+                if [ $? -ne 0 ]; then
+                        echo "ERROR: MP OBS Build Failed"
+                        exit -1
+                fi
+
+        fi
+        cd $jpath
+        echo " Production Build for MPOBS App... Complete"
+        echo
+}
+
+preBuildTasks() {
+	getSecurityJar
+        buildResponsive
+}
+
+obsBuildTasks() {
+        buildOBSResponsive
+}
+
+postBuildTasks() {
+        echo
+        echo "Generating package for SCM.."
+        WAR_LOCATION="mpa-app/mpa-web/build/libs"
+        BUILD_WAR_LOCATION="$HOME/jobs/$JOB_NAME/builds/$BUILD_NUMBER/binaries"
+        mkdir "$BUILD_WAR_LOCATION"
+        mv "$WAR_LOCATION/mpa-web-WAS-internet.war" "$BUILD_WAR_LOCATION"
+        mv "$WAR_LOCATION/mpa-web-WAS-mpinternal.war" "$BUILD_WAR_LOCATION"
+
+        # package source and resources for SCM
+        RESOURCE_LOCATION="mpa-app/mpa-config/src/main/resources/properties"
+        SCM_DROP_LOCATION="$HOME/jobs/$JOB_NAME/builds/$BUILD_NUMBER"
+        mkdir -p "$SCM_DROP_LOCATION/source"
+        mkdir -p "$SCM_DROP_LOCATION/resources/QA"
+        mkdir -p "$SCM_DROP_LOCATION/resources/PROD"
+        mkdir -p "$SCM_DROP_LOCATION/resources/UAT1"
+        mkdir -p "$SCM_DROP_LOCATION/resources/UAT2"
+        mkdir -p "$SCM_DROP_LOCATION/resources/$mpaenv"
+
+        # copy over props
+        cp -r "$RESOURCE_LOCATION/bcbsm_qa" "$SCM_DROP_LOCATION/resources/QA"
+        cp -r "$RESOURCE_LOCATION/bcbsm_prd" "$SCM_DROP_LOCATION/resources/PROD"
+        cp -r "$RESOURCE_LOCATION/bcbsm_uat1" "$SCM_DROP_LOCATION/resources/UAT1"
+        cp -r "$RESOURCE_LOCATION/bcbsm_uat2" "$SCM_DROP_LOCATION/resources/UAT2"
+        cp -r "$RESOURCE_LOCATION/$proot" "$SCM_DROP_LOCATION/resources/$mpaenv"
+
+        # clean up and copy over source
+        cd mpa-app
+        ./gradlew clean
+        rm -rf mpa-config mpa-web/src/main/webapp/resources/js-build
+        rm -rf mpa-web/src/main/webapp/resources/js-build-mobile
+        rm -rf mpa-web/src/main/webapp/resources/js-build-login
+        rm build*.log &> /dev/null
+        rm -rf .gradle
+        rm -rf buildSrc/build
+        rm -rf buildSrc/.gradle
+        cd -
+
+        cp -r mpa-app "$SCM_DROP_LOCATION/source/"
+        echo "Generating package for SCM... Complete"
+        echo
+}
+
+case "$2" in
+        DEPLOY_PROPS)
+                deployProperties
+                if [[ "$mpaenv" = "SIT1" ]]; then
+                        setSITEnv
+                        deployProperties
+                fi
+                ;;
+	DEPLOY_RESP)
+                deployResponsiveDist
+                ;;
+	DEPLOY_OBS)
+                deployResponsiveOBSDist
+                ;;
+        DEPLOY_EXT)
+                deployExtApplication
+                if [[ "$mpaenv" = "SIT1" ]]; then
+                        setSITEnv
+                        deployExtApplication
+                fi
+                ;;
+        DEPLOY_INT)
+                deployIntApplication
+                if [[ "$mpaenv" = "SIT1" ]]; then
+                        setSITEnv
+                        deployIntApplication
+                fi
+                ;;
+        RESTART_EXT)
+                restartExtServers
+                if [[ "$mpaenv" = "SIT1" ]]; then
+                        setSITEnv
+                        restartExtServers
+                fi
+                ;;
+        RESTART_INT)
+                restartIntServers
+                if [[ "$mpaenv" = "SIT1" ]]; then
+                        setSITEnv
+                        restartIntServers
+                fi
+                ;;
+        BBUILD)
+                preBuildTasks
+                ;;
+	OBSBUILD)
+                obsBuildTasks
+                ;;
+        ABUILD)
+                postBuildTasks
+                ;;
+        *)
+
+                echo
+                echo "ERROR: Wrong Action Provided"
+                echo
+                exit -1
+                ;;
+esac
