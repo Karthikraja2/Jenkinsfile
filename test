@@ -1,4 +1,3 @@
-+ cat /var/jenkins_home/script/liberty-dev4-a13.sh
 #!/bin/bash
 
 ######################################################################
@@ -40,11 +39,11 @@ case $mpaenv in
                 broot=DEV3Builder
                 ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}|sed 's/.*/\L&/; s/[a-z]*/\u&/g'`
                 ;;
-	DEV4)
+ 	DEV5)
                 uhost=nrxav0640
-                droot=DEV4
-                proot=bcbsm_dev4
-                broot=DEV4Builder
+                droot=DEV5
+                proot=bcbsm_dev5
+                broot=DEV5Builder
                 ucdenv=`echo ${droot}|tr '[:lower:]' '[:upper:]'|cut -c1-3`;srvenv=`echo ${droot}|sed 's/.*/\L&/; s/[a-z]*/\u&/g'`
                 ;;
         SIT2)
@@ -138,9 +137,9 @@ deployProperties() {
 deployResponsiveDist() {
         echo
         echo "Deploying responsive compiled code"
-        ssh -o StrictHostKeyChecking=no $suser@nrxwv0638 rm -rf /app/docs/wsIHSmpaDEV4srv1/static/mpa/responsive/app
-        scp -pr /var/lib/jenkins/mpar/DEV4/mpa_responsive/mpa-web/dist/app $suser@nrxwv0638:/app/docs/wsIHSmpaDEV4srv1/static/mpa/responsive/app
-	ssh $suser@nrxwv0638 chmod -R 777 /app/docs/wsIHSmpaDEV4srv1/static
+        ssh -o StrictHostKeyChecking=no $suser@nrxwv0638 rm -rf /app/docs/wsIHSmpaDEV5srv1/static/mpa/responsive/app
+        scp -pr /var/lib/jenkins/mpar/DEV5/mpa_responsive/mpa-web/dist/app $suser@nrxwv0638:/app/docs/wsIHSmpaDEV5srv1/static/mpa/responsive/app
+	ssh $suser@nrxwv0638 chmod -R 777 /app/docs/wsIHSmpaDEV5srv1/static
         echo "Deploying responsive compiled code... Complete"
         echo
 }
@@ -148,18 +147,28 @@ deployResponsiveDist() {
 deployResponsiveOBSDist() {
         echo
         echo "Deploying responsive OBS compiled code"
-        ssh -o StrictHostKeyChecking=no $suser@nrxwv0638 rm -rf /app/docs/wsIHSmpaDEV4srv1/static/obs/responsive/obs-responsive
-        scp -pr /var/lib/jenkins/mpar/DEVOBS/obs-responsive/dist/obs-responsive $suser@nrxwv0638:/app/docs/wsIHSmpaDEV4srv1/static/obs/responsive/
-	ssh $suser@nrxwv0638 chmod -R 777 /app/docs/wsIHSmpaDEV4srv1/static
+        ssh -o StrictHostKeyChecking=no $suser@nrxwv0638 rm -rf /app/docs/wsIHSmpaDEV5srv1/static/obs/responsive/app/obs-responsive
+        scp -pr /var/lib/jenkins/mpar/DEVOBS/obs-responsive/dist/obs-responsive $suser@nrxwv0638:/app/docs/wsIHSmpaDEV5srv1/static/obs/responsive/app
+	ssh $suser@nrxwv0638 chmod -R 777 /app/docs/wsIHSmpaDEV5srv1/static
         echo "Deploying responsive compiled code... Complete"
+        echo
+}
+
+deployResponsiveCTTDist() {
+        echo
+        echo "Deploying responsive CTT compiled code"
+        ssh -o StrictHostKeyChecking=no $suser@nrxwv0638 rm -rf /app/docs/wsIHSmpaDEV5srv1/static/ctt/responsive/app/ctt-responsive
+        scp -pr /var/lib/jenkins/mpar/DEVCTT/ctt-responsive/dist/ctt-responsive $suser@nrxwv0638:/app/docs/wsIHSmpaDEV5srv1/static/ctt/responsive/app
+	ssh $suser@nrxwv0638 chmod -R 775 /app/docs/wsIHSmpaDEV5srv1/static
+        echo "Deploying CTT responsive compiled code... Complete"
         echo
 }
 
 deployExtApplication() {
         echo
         echo "Deploying external application mpa-app/mpa-web/build/libs/mpa-web-WAS-internet.war.."
-        scp $jpath/mpa-app/mpa-web/build/libs/mpa-web-WAS-internet.war $suser@$uhost:$rdeplloc/$droot/MpoTechApp/
-        echo "Deploying external application $rdeplloc/$droot/MpoTechApp/mpa-web-WAS-internet.war... Complete"
+        scp $jpath/mpa-app/mpa-web/build/libs/mpa-web-WAS-internet.war $suser@$uhost:$rdeplloc/$droot/MpTechUpgradeApp/
+        echo "Deploying external application $rdeplloc/$droot/MpTechUpgradeApp/mpa-web-WAS-internet.war... Complete"
         echo
 }
 deployIntApplication() {
@@ -202,7 +211,7 @@ getSecurityJar() {
 buildResponsive() {
         echo
         AOT=/var/lib/jenkins/mpar/AOT
-        mpar=/var/lib/jenkins/mpar/DEV4/mpa_responsive/
+        mpar=/var/lib/jenkins/mpar/DEV5/mpa_responsive/
         export PATH=/opt/nodejs/node-v16.10.0-linux-x64/bin:$mpar/mpa-web/node_modules/.bin:$PATH
         BHOME=`pwd|sed 's/ /\\ /g'`
 
@@ -210,7 +219,7 @@ buildResponsive() {
         then
                 echo "Skiping MPR, doing traditional build only.."
         else
-                echo "Starting Production Build for MPR App.."
+                echo "Starting AOT Build for MPR App.."
 		echo $mpar
                 cd $mpar
 		git fetch
@@ -244,7 +253,10 @@ buildResponsive() {
 				for f in `find . -name "main.*.js" -print`; do
 					sed -i.bak 's|/assets/images/|app/mpa/assets/images/|g' $f
 				done
-
+				
+				for f in `find . -type f -name '[0-9]*.[0-9a-z]*.js' -print`; do
+					sed -i.bak 's|/assets/images/|app/mpa/assets/images/|g' $f
+				done
 
 				sed -i.bak 's|assets/lib/|app/mpa/assets/lib/|g' mpa.html
 				sed -i.bak 's|\.\./fonts|app/mpa/assets/lib/fontawesome/fonts|g' mpa.html
@@ -261,7 +273,7 @@ buildResponsive() {
                 #ls -ltraFh "$BHOME/mpa-app/mpa-web/src/main/webapp/responsive/"
         fi
         cd $jpath
-        echo " Production Build for MPR App... Complete"
+        echo " AOT Build for MPR App... Complete"
         echo
 }
 
@@ -282,20 +294,137 @@ buildOBSResponsive() {
                 git checkout $MPOBS_BRANCH_NAME
                 git pull
                 #rm -rf "$mpobs/dist/"
+
+		#Vulnerability Analysis
+		#npm-audit-ci
+
+		#if [ $? -ne 0 ]; then
+        #                echo "ERROR: MP OBS Vulnerability Analysis Failed"
+        #                exit -1
+        #        fi
+
+		#ES Lint
+		node --max_old_space_size=6144 $mpobs/node_modules/.bin/ng lint
+		
+		if [ $? -ne 0 ]; then
+                        echo "ERROR: MP OBS ES Lint Failed"
+                        exit -1
+                fi
+		
+		#Style Lint
+		#npm run lint:styles
+
+		#if [ $? -ne 0 ]; then
+        #                echo "ERROR: MP OBS Style Lint Failed"
+        #                exit -1
+        #        fi
  
 		#angular 15
-                node --max_old_space_size=4096 $mpobs/node_modules/.bin/ng build --configuration=production
+                ng build --configuration=production
 
                 if [ $? -ne 0 ]; then
                         echo "ERROR: MP OBS Build Failed"
                         exit -1
                 fi
+		
+		cd $mpobs/dist/obs-responsive
+		for f in `find . -name "main.*.js" -print`; do
+			sed -i.bak 's|/assets/images/|app/obs-responsive/assets/images/|g' $f
+		done
+		#for f in `find . -name "*.js" -print`; do
+			#sed -i.bak 's|/assets/images/|app/obs-responsive/assets/images/|g' $f
+		#done
+
+		sed -i.bak 's|<base href="/">|<base href="../../" />|g' index.html
+		sed -i.bak 's|assets/lib/|app/obs-responsive/assets/lib/|g' index.html
+		sed -i.bak 's|href="styles.|href="app/obs-responsive/styles.|g' index.html
+		sed -i.bak -r 's/(runtime|polyfills|main\..*?js)/app\/obs-responsive\/\1/g' index.html
+		rm -f *.bak
 
         fi
         cd $jpath
         echo " Production Build for MPOBS App... Complete"
         echo
 }
+
+buildCTTResponsive() {
+        echo 'CTT build method'
+        mpctt=/var/lib/jenkins/mpar/DEVCTT/ctt-responsive
+        export PATH=/opt/nodejs/node-v16.13.0-linux-x64/bin:$mpctt/node_modules/.bin:$PATH
+        WHOME=`pwd|sed 's/ /\\ /g'`
+
+        if [ -z "$MPCTT_BRANCH_NAME" ]
+        then
+                echo "Skiping MPCTT, doing traditional build only.."
+        else
+                echo "Starting Production Build for MPCTT App.."
+                cd $mpctt
+		git fetch
+		git pull
+                git checkout $MPCTT_BRANCH_NAME
+                git pull
+                #rm -rf "$mpctt/dist/"
+
+		#Vulnerability Analysis
+		#npm install -g npm-audit-ci
+
+		#if [ $? -ne 0 ]; then
+        #                echo "ERROR: MP CTT Vulnerability Analysis Failed"
+        #                exit -1
+        #        fi
+
+		#ES Lint
+		node --max_old_space_size=6144 $mpctt/node_modules/.bin/ng lint
+
+		if [ $? -ne 0 ]; then
+                        echo "ERROR: MP CTT ES Lint Failed"
+                        exit -1
+                fi
+		
+		#Style Lint
+		#npm run lint:styles
+
+		#if [ $? -ne 0 ]; then
+                        #echo "ERROR: MP CTT Style Lint Failed"
+                        #exit -1
+                #fi
+				
+ 		#angular 15
+                ng build --configuration=production
+
+                if [ $? -ne 0 ]; then
+                        echo "ERROR: MP CTT Build Failed"
+                        exit -1
+                fi
+				
+		#Unit Test
+		#npm run test:ci
+
+		#if [ $? -ne 0 ]; then
+                        #echo "ERROR: MP CTT Unit Test Failed"
+                        #exit -1
+                #fi
+		
+		cd $mpctt/dist/ctt-responsive
+		for f in `find . -name "main.*.js" -print`; do
+			sed -i.bak 's|/assets/images/|app/ctt-responsive/assets/images/|g' $f
+		done
+		#for f in `find . -name "*.js" -print`; do
+			#sed -i.bak 's|/assets/images/|app/ctt-responsive/assets/images/|g' $f
+		#done
+
+		sed -i.bak 's|<base href="/">|<base href="../../" />|g' index.html
+		sed -i.bak 's|assets/lib/|app/ctt-responsive/assets/lib/|g' index.html
+		sed -i.bak 's|href="styles.|href="app/ctt-responsive/styles.|g' index.html
+		sed -i.bak -r 's/(runtime|polyfills|main\..*?js)/app\/ctt-responsive\/\1/g' index.html
+		rm -f *.bak
+
+        fi
+        cd $jpath
+        echo " Production Build for MPCTT App... Complete"
+        echo
+}
+
 
 preBuildTasks() {
 	getSecurityJar
@@ -304,6 +433,10 @@ preBuildTasks() {
 
 obsBuildTasks() {
         buildOBSResponsive
+}
+
+cttBuildTasks() {
+        buildCTTResponsive
 }
 
 postBuildTasks() {
@@ -363,6 +496,9 @@ case "$2" in
 	DEPLOY_OBS)
                 deployResponsiveOBSDist
                 ;;
+	DEPLOY_CTT)
+                deployResponsiveCTTDist
+                ;;
         DEPLOY_EXT)
                 deployExtApplication
                 if [[ "$mpaenv" = "SIT1" ]]; then
@@ -397,6 +533,9 @@ case "$2" in
 	OBSBUILD)
                 obsBuildTasks
                 ;;
+	CTTBUILD)
+                cttBuildTasks
+                ;;
         ABUILD)
                 postBuildTasks
                 ;;
@@ -408,3 +547,4 @@ case "$2" in
                 exit -1
                 ;;
 esac
+
